@@ -72,7 +72,15 @@ const Auth = (() => {
       throw new ApiError("Logged in, but no token was returned by the server.", 0);
     }
     Api.setToken(token);
-    setUser(userFromLoginResponse(token, email));
+
+    let name = "";
+    try {
+      name = await Api.getName();
+    } catch {
+      name = userFromLoginResponse(token, email).name;
+    }
+
+    setUser({ name: name || "User", email });
   }
 
   async function logout() {

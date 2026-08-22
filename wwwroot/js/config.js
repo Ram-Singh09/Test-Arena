@@ -29,6 +29,7 @@ const CONFIG = (() => {
     Sumbit_Test: { path: Base_Test_Room + "SubmitTest", method: "POST" },
     Get_LeaderBoard: { path: Base_Test_Room + "GetLeaderboard", method: "POST" },
 
+    Get_Name: { path: Base_User + "GetName", method: "GET" },
     // No HTTP method was given for Sign_Out in the backend mapping —
     // POST is assumed. If your backend uses a different verb, change it here.
     Sign_Out: { path: Base + "SignOut", method: "POST" },

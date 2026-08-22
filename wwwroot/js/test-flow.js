@@ -1,8 +1,5 @@
 /* =====================================================================
    test-flow.js — answering questions and submitting once
-   Note: Get_Questions only returns Questions/Options, no time limit,
-   so participants see an elapsed-time stopwatch rather than a
-   countdown — the server is what actually enforces the time limit.
    ===================================================================== */
 
 const TestFlow = (() => {
@@ -34,8 +31,12 @@ const TestFlow = (() => {
       elapsedEl.textContent = formatElapsed(secs);
     }, 1000);
   }
+
   function stopStopwatch() {
-    if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+    if (timerHandle) {
+      clearInterval(timerHandle);
+      timerHandle = null;
+    }
   }
 
   function renderNav() {
@@ -107,6 +108,7 @@ function wireTestFlow() {
     const s = TestFlow.getState();
     if (s && s.currentIndex > 0) TestFlow.renderQuestion(s.currentIndex - 1);
   });
+
   document.getElementById("test-next-btn").addEventListener("click", () => {
     const s = TestFlow.getState();
     if (s && s.currentIndex < s.questions.length - 1) TestFlow.renderQuestion(s.currentIndex + 1);
@@ -115,28 +117,37 @@ function wireTestFlow() {
   document.getElementById("test-submit-btn").addEventListener("click", async () => {
     const s = TestFlow.getState();
     if (!s) return;
+
     const unanswered = s.answers.filter((a) => a === -1).length;
     const message = unanswered > 0
       ? `You have ${unanswered} unanswered question${unanswered === 1 ? "" : "s"}. You can only submit once — continue anyway?`
       : "You can only submit once. Submit your answers now?";
+    
     const ok = await confirmAction({ title: "Submit test?", message, confirmLabel: "Submit" });
     if (!ok) return;
 
     const btn = document.getElementById("test-submit-btn");
     setButtonBusy(btn, true, "Submitting…");
+
     try {
-      // 1. Capture the exact score returned by Results.Ok(Score)
-      const score = await Api.submitTest({ answers: s.answers, roomId: s.session.roomId, password: s.session.password });
-      
-      markSubmitted(s.session.roomId);
+      // 1. Submit answers and capture raw Score returned by backend
+      const score = await Api.submitTest({
+        answers: s.answers,
+        roomId: s.session.roomId,
+        password: s.session.password,
+      });
+
       TestFlow.stop();
-      
-      // 2. Show the score to the user instantly
+
+      // 2. Notify the user of their score
       showToast(`Test submitted! Your score: ${score}`, "success", 6000);
-      
+
+      // 3. Navigate directly to the leaderboard
       Leaderboard.open({
-        roomId: s.session.roomId, password: s.session.password,
-        name: s.session.name, viewerName: s.session.name,
+        roomId: s.session.roomId,
+        password: s.session.password,
+        name: s.session.name,
+        viewerName: s.session.name,
       });
     } catch (err) {
       showToast(err.message || "Couldn't submit the test — you may have already submitted it.", "error");

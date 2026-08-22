@@ -118,6 +118,10 @@ const Api = (() => {
     return request("Sign_Out", { auth: true });
   }
 
+  function getName() {
+    return request("Get_Name", { auth: true });
+  }
+
   /* ---------------- Rooms (host) ---------------- */
 
   function createRoom({ minutes, password, positiveMarks, negativeMarks, creatorName, testPaper }) {
@@ -193,7 +197,7 @@ const Api = (() => {
     getBaseUrl, setBaseUrl, isConfigured,
     getToken, setToken,
     sendOtp, registerUser, loginUser, forgotPassword, signOut,
-    createRoom, startRoom, uploadTest,
+    createRoom, startRoom, uploadTest, getName,
     joinRoom, leaveRoom, getQuestions, submitTest, getLeaderboard,
   };
 })();

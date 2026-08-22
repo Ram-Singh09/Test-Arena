@@ -348,7 +348,6 @@ Web_app.MapGet(End_Points.Get_Name, async (ClaimsPrincipal User, App_DB_Context 
 
 }).RequireAuthorization();
 
-
 // room room room
 Web_app.Run();
 

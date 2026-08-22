@@ -63,9 +63,19 @@ function wireProfile() {
   });
 }
 
-function openProfile() {
+async function openProfile() {
   const user = Auth.getUser();
-  document.getElementById("profile-name-display").value = user?.name || "User";
   document.getElementById("profile-email-display").value = user?.email || "";
+  document.getElementById("profile-name-display").value = user?.name || "Loading…";
   showView("view-profile");
+
+  try {
+    const liveName = await Api.getName();
+    if (liveName) {
+      document.getElementById("profile-name-display").value = liveName;
+      Auth.setUser({ ...user, name: liveName });
+    }
+  } catch {
+    document.getElementById("profile-name-display").value = user?.name || "User";
+  }
 }
