@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TestArena — Coding Assessments</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ============ TOASTS ============ -->
+<div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ============ CONFIRM MODAL ============ -->
+<div id="confirm-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="confirm-title">Are you sure?</h3>
+    <p id="confirm-message" class="muted"></p>
+    <div class="modal-actions">
+      <button id="confirm-cancel" class="btn btn-ghost">Cancel</button>
+      <button id="confirm-ok" class="btn btn-danger">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ NAVBAR ============ -->
+<header class="navbar">
+  <div class="navbar-inner">
+    <button class="brand" id="brand-home-btn" aria-label="TestArena home">
+      <span class="brand-mark">TA</span>
+      <span class="brand-name">TestArena</span>
+    </button>
+
+    <nav class="nav-actions">
+      <div id="nav-authed" class="nav-group hidden">
+        <span id="nav-user-name" class="nav-user"></span>
+        <button id="nav-dashboard-btn" class="btn btn-ghost btn-sm">Dashboard</button>
+        <button id="nav-profile-btn" class="btn btn-ghost btn-sm">Profile</button>
+        <button id="nav-signout-btn" class="btn btn-ghost btn-sm">Sign out</button>
+      </div>
+      <div id="nav-guest" class="nav-group">
+        <button id="nav-login-btn" class="btn btn-ghost btn-sm">Log in</button>
+        <button id="nav-register-btn" class="btn btn-primary btn-sm">Register</button>
+      </div>
+      <button id="theme-toggle" class="icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">
+        <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ APP ROOT ============ -->
+<main id="app-root">
+
+  <!-- ---------- LANDING ---------- -->
+  <section id="view-landing" class="view">
+    <div class="hero">
+      <span class="ticket-eyebrow">// room-based coding assessments</span>
+      <h1>Run a test. Fill a room.<br>Watch the board move.</h1>
+      <p class="hero-sub">TestArena lets you spin up a timed test room, share one code, and grade the whole room at once — built for teaching and learning web dev by doing.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary btn-lg" id="hero-login-btn">Log in</button>
+        <button class="btn btn-secondary btn-lg" id="hero-register-btn">Create an account</button>
+      </div>
+      <div class="hero-grid">
+        <div class="hero-card">
+          <span class="hero-card-num">01</span>
+          <h3>Host a room</h3>
+          <p>Write questions, set the timer and marking scheme, and get a shareable room code.</p>
+        </div>
+        <div class="hero-card">
+          <span class="hero-card-num">02</span>
+          <h3>Join &amp; sit the test</h3>
+          <p>Enter the room code, answer on a scannable answer sheet, submit once.</p>
+        </div>
+        <div class="hero-card">
+          <span class="hero-card-num">03</span>
+          <h3>Check the board</h3>
+          <p>Scores tally instantly onto a live leaderboard for the whole room.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- LOGIN ---------- -->
+  <section id="view-login" class="view hidden">
+    <div class="auth-wrap">
+      <form id="login-form" class="ticket-card form-card" novalidate>
+        <div class="ticket-header">
+          <span class="ticket-eyebrow">Sign in</span>
+          <h2>Welcome back</h2>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="modal-body">
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" autocomplete="email" required>
+
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" autocomplete="current-password" required>
+
+          <p id="login-error" class="field-error hidden"></p>
+
+          <button type="submit" class="btn btn-primary btn-block" id="login-submit-btn">Log in</button>
+          <div class="form-links">
+            <button type="button" class="link-btn" id="goto-forgot-btn">Forgot password?</button>
+            <button type="button" class="link-btn" id="goto-register-btn">Need an account? Register</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ---------- REGISTER ---------- -->
+  <section id="view-register" class="view hidden">
+    <div class="auth-wrap">
+      <form id="register-form" class="ticket-card form-card" novalidate>
+        <div class="ticket-header">
+          <span class="ticket-eyebrow">Create account</span>
+          <h2>Join TestArena</h2>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="modal-body">
+          <label for="register-name">Name</label>
+          <input id="register-name" type="text" autocomplete="name" required>
+
+          <label for="register-email">Email</label>
+          <input id="register-email" type="email" autocomplete="email" required>
+
+          <label for="register-password">Password</label>
+          <input id="register-password" type="password" autocomplete="new-password" required minlength="6">
+
+          <label for="register-confirm">Confirm password</label>
+          <input id="register-confirm" type="password" autocomplete="new-password" required minlength="6">
+
+          <label for="register-otp">Verification code (OTP)</label>
+          <div class="otp-row">
+            <input id="register-otp" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="6-digit code" required>
+            <button type="button" class="btn btn-secondary btn-sm" id="register-send-otp-btn">Send code</button>
+          </div>
+          <p class="hint">We'll email a code to verify it's really you before creating the account.</p>
+
+          <p id="register-error" class="field-error hidden"></p>
+
+          <button type="submit" class="btn btn-primary btn-block" id="register-submit-btn">Create account</button>
+          <div class="form-links">
+            <button type="button" class="link-btn" id="register-goto-login-btn">Already have an account? Log in</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ---------- FORGOT PASSWORD ---------- -->
+  <section id="view-forgot" class="view hidden">
+    <div class="auth-wrap">
+      <form id="forgot-form" class="ticket-card form-card" novalidate>
+        <div class="ticket-header">
+          <span class="ticket-eyebrow">Reset password</span>
+          <h2>Forgot your password?</h2>
+        </div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="modal-body">
+          <label for="forgot-name">Name</label>
+          <input id="forgot-name" type="text" autocomplete="name" required>
+
+          <label for="forgot-email">Email</label>
+          <input id="forgot-email" type="email" autocomplete="email" required>
+
+          <label for="forgot-otp">Verification code (OTP)</label>
+          <div class="otp-row">
+            <input id="forgot-otp" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="6-digit code" required>
+            <button type="button" class="btn btn-secondary btn-sm" id="forgot-send-otp-btn">Send code</button>
+          </div>
+
+          <label for="forgot-password">New password</label>
+          <input id="forgot-password" type="password" autocomplete="new-password" required minlength="6">
+
+          <label for="forgot-confirm">Confirm new password</label>
+          <input id="forgot-confirm" type="password" autocomplete="new-password" required minlength="6">
+
+          <p id="forgot-error" class="field-error hidden"></p>
+
+          <button type="submit" class="btn btn-primary btn-block" id="forgot-submit-btn">Reset password</button>
+          <div class="form-links">
+            <button type="button" class="link-btn" id="forgot-goto-login-btn">Back to log in</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ---------- DASHBOARD ---------- -->
+  <section id="view-dashboard" class="view hidden">
+    <div class="page-head">
+      <span class="ticket-eyebrow">Dashboard</span>
+      <h1 id="dashboard-welcome">Welcome</h1>
+      <p class="muted">Host a new test room, or join one with a room code.</p>
+    </div>
+    <div class="action-grid">
+      <button class="action-card" id="dash-create-room-btn">
+        <span class="action-icon">＋</span>
+        <h3>Create a room</h3>
+        <p>Write a test, set the timer and marking, get a shareable code.</p>
+      </button>
+      <button class="action-card" id="dash-join-room-btn">
+        <span class="action-icon">↳</span>
+        <h3>Join a room</h3>
+        <p>Have a room code? Enter it and take a seat.</p>
+      </button>
+    </div>
+  </section>
+
+  <!-- ---------- PROFILE ---------- -->
+  <section id="view-profile" class="view hidden">
+    <div class="page-head">
+      <span class="ticket-eyebrow">Account</span>
+      <h1>Profile</h1>
+    </div>
+
+    <div class="card-col">
+      <div class="ticket-card">
+        <div class="ticket-header"><span class="ticket-eyebrow">Details</span><h2>Your account</h2></div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="modal-body">
+          <label>Name</label>
+          <input id="profile-name-display" type="text" disabled>
+          <label>Email</label>
+          <input id="profile-email-display" type="text" disabled>
+          <p class="hint" id="profile-name-note">Updating your name isn't available yet — this backend doesn't expose an update-name endpoint.</p>
+        </div>
+      </div>
+
+      <form id="change-password-form" class="ticket-card" novalidate>
+        <div class="ticket-header"><span class="ticket-eyebrow">Security</span><h2>Change password</h2></div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="modal-body">
+          <label for="profile-otp">Verification code (OTP)</label>
+          <div class="otp-row">
+            <input id="profile-otp" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="6-digit code" required>
+            <button type="button" class="btn btn-secondary btn-sm" id="profile-send-otp-btn">Send code</button>
+          </div>
+          <label for="profile-new-password">New password</label>
+          <input id="profile-new-password" type="password" autocomplete="new-password" required minlength="6">
+          <label for="profile-confirm-password">Confirm new password</label>
+          <input id="profile-confirm-password" type="password" autocomplete="new-password" required minlength="6">
+          <p id="profile-password-error" class="field-error hidden"></p>
+          <button type="submit" class="btn btn-primary btn-block" id="profile-password-submit-btn">Update password</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ---------- CREATE ROOM ---------- -->
+  <section id="view-create-room" class="view hidden">
+    <div class="page-head">
+      <span class="ticket-eyebrow">Host</span>
+      <h1 id="create-room-heading">Create a room</h1>
+      <p class="muted">Set the rules, then write the answer key. Questions can't be changed once the room starts.</p>
+    </div>
+
+    <form id="create-room-form" class="ticket-card" novalidate>
+      <div class="ticket-header"><span class="ticket-eyebrow">Step 01</span><h2>Room settings</h2></div>
+      <div class="ticket-perf" aria-hidden="true"></div>
+      <div class="modal-body">
+        <div class="field-grid">
+          <div>
+            <label for="room-minutes">Duration (minutes)</label>
+            <input id="room-minutes" type="number" min="1" max="180" value="30" required>
+          </div>
+          <div>
+            <label for="room-password">Room password (numeric)</label>
+            <input id="room-password" type="number" min="0" max="65535" placeholder="e.g. 4821" required>
+          </div>
+          <div>
+            <label for="room-positive-marks">Positive marks / correct answer</label>
+            <input id="room-positive-marks" type="number" min="0" max="255" value="4" required>
+          </div>
+          <div>
+            <label for="room-negative-marks">Negative marks / wrong answer</label>
+            <input id="room-negative-marks" type="number" min="0" max="255" value="1" required>
+          </div>
+          <div class="field-span-2">
+            <label for="room-creator-name">Your name (shown to participants as host)</label>
+            <input id="room-creator-name" type="text" required>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <div class="ticket-card">
+      <div class="ticket-header"><span class="ticket-eyebrow">Step 02</span><h2>Questions</h2></div>
+      <div class="ticket-perf" aria-hidden="true"></div>
+      <div class="modal-body">
+        <div id="question-builder-list" class="question-builder-list"></div>
+        <button type="button" class="btn btn-secondary" id="add-question-btn">＋ Add question</button>
+        <p id="builder-error" class="field-error hidden"></p>
+      </div>
+    </div>
+
+    <div class="sticky-actions">
+      <button type="button" class="btn btn-ghost" id="create-room-cancel-btn">Cancel</button>
+      <button type="button" class="btn btn-primary btn-lg" id="create-room-submit-btn">Create room</button>
+    </div>
+  </section>
+
+  <!-- ---------- HOST PANEL ---------- -->
+  <section id="view-host-panel" class="view hidden">
+    <div class="page-head">
+      <span class="ticket-eyebrow">Host</span>
+      <h1>Room control panel</h1>
+    </div>
+
+    <div class="ticket-card room-code-card">
+      <div class="ticket-header"><span class="ticket-eyebrow">Share this with participants</span><h2>Room pass</h2></div>
+      <div class="ticket-perf" aria-hidden="true"></div>
+      <div class="modal-body room-code-body">
+        <div class="code-block">
+          <span class="code-label">Room ID</span>
+          <span class="code-value" id="host-room-id">—</span>
+        </div>
+        <div class="code-block">
+          <span class="code-label">Password</span>
+          <span class="code-value" id="host-room-password">—</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="host-copy-btn">Copy invite</button>
+      </div>
+    </div>
+
+    <div class="status-banner" id="host-status-banner">Not started yet</div>
+
+    <div class="ticket-card">
+      <div class="ticket-header"><span class="ticket-eyebrow">Summary</span><h2>Room settings</h2></div>
+      <div class="ticket-perf" aria-hidden="true"></div>
+      <div class="modal-body">
+        <dl class="summary-list" id="host-room-summary"></dl>
+      </div>
+    </div>
+
+    <div class="sticky-actions">
+      <button class="btn btn-ghost" id="host-replace-test-btn">Replace test paper</button>
+      <button class="btn btn-ghost" id="host-leaderboard-btn">View leaderboard</button>
+      <button class="btn btn-primary btn-lg" id="host-start-room-btn">Start room</button>
+    </div>
+    <p class="hint center-hint">Once you start the room, questions can no longer be changed and the timer begins for everyone who has joined.</p>
+  </section>
+
+  <!-- ---------- JOIN ROOM ---------- -->
+  <section id="view-join-room" class="view hidden">
+    <div class="auth-wrap">
+      <form id="join-room-form" class="ticket-card form-card" novalidate>
+        <div class="ticket-header"><span class="ticket-eyebrow">Participant</span><h2>Join a room</h2></div>
+        <div class="ticket-perf" aria-hidden="true"></div>
+        <div class="modal-body">
+          <label for="join-room-id">Room ID</label>
+          <input id="join-room-id" type="number" required>
+          <label for="join-room-password">Room password</label>
+          <input id="join-room-password" type="number" required>
+          <label for="join-room-name">Your name</label>
+          <input id="join-room-name" type="text" required>
+          <p id="join-room-error" class="field-error hidden"></p>
+          <button type="submit" class="btn btn-primary btn-block" id="join-room-submit-btn">Join room</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ---------- WAITING ROOM ---------- -->
+  <section id="view-waiting-room" class="view hidden">
+    <div class="waiting-wrap">
+      <span class="ticket-eyebrow">Room <span id="waiting-room-id">—</span></span>
+      <div class="pulse-dot"></div>
+      <h1>Waiting for the host to start…</h1>
+      <p class="muted" id="waiting-sub">You're in as <strong id="waiting-name">—</strong>. Keep this tab open — we'll check for you.</p>
+      <p id="waiting-error" class="field-error hidden"></p>
+      <div class="waiting-actions">
+        <button class="btn btn-primary btn-lg" id="waiting-check-btn">Check now</button>
+        <label class="toggle-row">
+          <input type="checkbox" id="waiting-auto-toggle" checked>
+          <span>Auto-check every 5s</span>
+        </label>
+      </div>
+      <button class="btn btn-ghost" id="waiting-leave-btn">Leave room</button>
+    </div>
+  </section>
+
+  <!-- ---------- TEST TAKING ---------- -->
+  <section id="view-test" class="view hidden">
+    <div class="test-topbar">
+      <span class="test-room-tag">Room <span id="test-room-id">—</span></span>
+      <div class="stopwatch" id="test-stopwatch" title="Elapsed time — the server enforces the real time limit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>
+        <span id="test-elapsed">00:00</span>
+      </div>
+      <span class="test-progress" id="test-progress">0 / 0 answered</span>
+    </div>
+
+    <div class="test-layout">
+      <aside class="question-nav-panel">
+        <h4>Questions</h4>
+        <div id="question-nav" class="question-nav-grid"></div>
+        <div class="nav-legend">
+          <span><i class="dot dot-answered"></i> Answered</span>
+          <span><i class="dot dot-unanswered"></i> Unanswered</span>
+        </div>
+      </aside>
+
+      <div class="question-main">
+        <div class="ticket-card">
+          <div class="ticket-header">
+            <span class="ticket-eyebrow" id="test-question-count">Question 1</span>
+          </div>
+          <div class="ticket-perf" aria-hidden="true"></div>
+          <div class="modal-body">
+            <p class="question-text" id="test-question-text">—</p>
+            <div class="bubble-options" id="test-options"></div>
+          </div>
+        </div>
+        <div class="test-nav-buttons">
+          <button class="btn btn-ghost" id="test-prev-btn">← Previous</button>
+          <button class="btn btn-ghost" id="test-next-btn">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sticky-actions">
+      <span class="muted" id="test-submit-hint">You can submit only once — double-check your answers.</span>
+      <button class="btn btn-danger btn-lg" id="test-submit-btn">Submit test</button>
+    </div>
+  </section>
+
+  <!-- ---------- LEADERBOARD ---------- -->
+  <section id="view-leaderboard" class="view hidden">
+    <div class="page-head">
+      <span class="ticket-eyebrow">Room <span id="lb-room-id">—</span></span>
+      <h1>Leaderboard</h1>
+    </div>
+    <div class="ticket-card">
+      <div class="ticket-header"><span class="ticket-eyebrow">Live standings</span><h2>Scores</h2></div>
+      <div class="ticket-perf" aria-hidden="true"></div>
+      <div class="modal-body">
+        <p id="lb-empty" class="muted hidden">No scores yet.</p>
+        <ol id="leaderboard-list" class="leaderboard-list"></ol>
+      </div>
+    </div>
+    <div class="sticky-actions">
+      <button class="btn btn-ghost" id="lb-back-btn">Back to dashboard</button>
+      <button class="btn btn-secondary" id="lb-refresh-btn">Refresh</button>
+    </div>
+  </section>
+
+</main>
+
+
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/profile.js"></script>
+<script src="js/create-room.js"></script>
+<script src="js/host-panel.js"></script>
+<script src="js/join-room.js"></script>
+<script src="js/test-flow.js"></script>
+<script src="js/leaderboard.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
