@@ -17,8 +17,8 @@ class ApiError extends Error {
 }
 
 const Api = (() => {
-  function getBaseUrl() {
-    return "/";
+    function getBaseUrl() {
+    return window.location.origin;
   }
 
   function setBaseUrl(url) {
