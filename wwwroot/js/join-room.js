@@ -8,6 +8,10 @@ const RoomSession = {
   clear() { Store.remove(CONFIG.STORAGE_KEYS.ROOM_SESSION); },
 };
 
+function hasSubmitted(roomId) {
+  const list = Store.get(CONFIG.STORAGE_KEYS.SUBMITTED_ROOMS, []);
+  return list.includes(roomId);
+}
 
 function markSubmitted(roomId) {
   const list = Store.get(CONFIG.STORAGE_KEYS.SUBMITTED_ROOMS, []);
@@ -45,11 +49,7 @@ async function checkRoomStarted(session, { silent = false } = {}) {
   try {
     const data = await Api.getQuestions({ roomId: session.roomId, password: session.password, name: session.name });
     stopWaitingPoll();
-    if (hasSubmitted(session.roomId)) {
-      showToast("You've already submitted this test — showing the leaderboard.", "info");
-      Leaderboard.open({ roomId: session.roomId, password: session.password, name: session.name, viewerName: session.name });
-      return;
-    }
+    
     const questions = readField(data, "Questions", "questions") || [];
     const options = readField(data, "Options", "options") || [];
     
