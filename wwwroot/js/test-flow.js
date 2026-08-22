@@ -11,7 +11,7 @@ const TestFlow = (() => {
       session,
       questions,
       options, // flat, 4 per question
-      answers: new Array(questions.length).fill(-1),
+      answers: new Array(questions.length).fill(4),
       currentIndex: 0,
       startedAt: Date.now(),
     };
@@ -56,7 +56,7 @@ const TestFlow = (() => {
   function refreshNavStates() {
     const nav = document.getElementById("question-nav");
     Array.from(nav.children).forEach((btn, idx) => {
-      btn.classList.toggle("answered", state.answers[idx] !== -1);
+      btn.classList.toggle("answered", state.answers[idx] !== 4);
       btn.classList.toggle("current", idx === state.currentIndex);
     });
   }
@@ -93,7 +93,7 @@ const TestFlow = (() => {
   }
 
   function updateProgress() {
-    const answered = state.answers.filter((a) => a !== -1).length;
+    const answered = state.answers.filter((a) => a !== 4).length;
     document.getElementById("test-progress").textContent = `${answered} / ${state.questions.length} answered`;
   }
 
@@ -118,7 +118,7 @@ function wireTestFlow() {
     const s = TestFlow.getState();
     if (!s) return;
 
-    const unanswered = s.answers.filter((a) => a === -1).length;
+    const unanswered = s.answers.filter((a) => a === 4).length;
     const message = unanswered > 0
       ? `You have ${unanswered} unanswered question${unanswered === 1 ? "" : "s"}. You can only submit once — continue anyway?`
       : "You can only submit once. Submit your answers now?";
