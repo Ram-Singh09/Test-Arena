@@ -25,5 +25,6 @@ static class End_Points
     Sumbit_Test = Base + Base_Test_Room + "SubmitTest", // POST, dto of ans
     Get_LeaderBoard = Base + Base_Test_Room + "GetLeaderboard", // POST ?, send room join dto for verification
 
+    Get_Name = Base + Base_User + "GetName", // GET, verify using token
     Sign_Out = Base + "SignOut";
 }
