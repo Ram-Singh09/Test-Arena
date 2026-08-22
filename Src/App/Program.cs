@@ -330,7 +330,7 @@ Web_app.MapPost(End_Points.Get_LeaderBoard, (Room_Joining_Info Info, ClaimsPrinc
 
 }).RequireAuthorization();
 
-Web_app.MapGet(End_Points.Get_LeaderBoard, async (ClaimsPrincipal User, App_DB_Context Db) =>
+Web_app.MapGet(End_Points.Get_Name, async (ClaimsPrincipal User, App_DB_Context Db) =>
 {
     // db id
     var Db_id_str = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
