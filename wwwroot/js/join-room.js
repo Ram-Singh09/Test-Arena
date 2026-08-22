@@ -8,10 +8,7 @@ const RoomSession = {
   clear() { Store.remove(CONFIG.STORAGE_KEYS.ROOM_SESSION); },
 };
 
-function hasSubmitted(roomId) {
-  const list = Store.get(CONFIG.STORAGE_KEYS.SUBMITTED_ROOMS, []);
-  return list.includes(roomId);
-}
+
 function markSubmitted(roomId) {
   const list = Store.get(CONFIG.STORAGE_KEYS.SUBMITTED_ROOMS, []);
   if (!list.includes(roomId)) {
