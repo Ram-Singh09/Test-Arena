@@ -321,6 +321,14 @@ static class App_Funcs
 
         return App_State.Op_Success;
     }
+    
+    public static async ValueTask<(App_State, string)> Get_Name(int Db_id, App_DB_Context Db)
+    {
+        var User = await Db.Users.FindAsync(Db_id);
+        if (User is null) return (App_State.User_Not_Exists, "Invalid");
+
+        return (App_State.Op_Success, User.Name);
+    }
 
     // gemini made for detailed erroe reponse
     public static IResult Get_Error_Msg(App_State state)
