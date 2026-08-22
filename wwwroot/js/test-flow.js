@@ -125,10 +125,15 @@ function wireTestFlow() {
     const btn = document.getElementById("test-submit-btn");
     setButtonBusy(btn, true, "Submitting…");
     try {
-      await Api.submitTest({ answers: s.answers, roomId: s.session.roomId, password: s.session.password });
+      // 1. Capture the exact score returned by Results.Ok(Score)
+      const score = await Api.submitTest({ answers: s.answers, roomId: s.session.roomId, password: s.session.password });
+      
       markSubmitted(s.session.roomId);
       TestFlow.stop();
-      showToast("Test submitted.", "success");
+      
+      // 2. Show the score to the user instantly
+      showToast(`Test submitted! Your score: ${score}`, "success", 6000);
+      
       Leaderboard.open({
         roomId: s.session.roomId, password: s.session.password,
         name: s.session.name, viewerName: s.session.name,

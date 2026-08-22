@@ -93,15 +93,50 @@ const VIEW_IDS = [
   "view-test", "view-leaderboard",
 ];
 
-function showView(viewId) {
+let isNavigatingHistory = false;
+
+function showView(viewId, pushToHistory = true) {
   VIEW_IDS.forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.toggle("hidden", id !== viewId);
   });
+
+  // Push state to browser history unless we arrived here via back/forward
+  if (pushToHistory && !isNavigatingHistory) {
+    history.pushState({ viewId }, "", `#${viewId.replace("view-", "")}`);
+  }
+
   window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
   document.dispatchEvent(new CustomEvent("viewchange", { detail: { viewId } }));
 }
+
+// Listen for browser Back and Forward button clicks
+window.addEventListener("popstate", (e) => {
+  const targetView = e.state?.viewId;
+
+  // Prevent accidental back-navigation during an active test
+  const activeTest = document.getElementById("view-test");
+  if (activeTest && !activeTest.classList.contains("hidden")) {
+    const confirmLeave = window.confirm("You are currently taking a test. Leaving now will forfeit your progress. Are you sure you want to go back?");
+    if (!confirmLeave) {
+      history.pushState({ viewId: "view-test" }, "", "#test");
+      return;
+    }
+  }
+
+  if (targetView && VIEW_IDS.includes(targetView)) {
+    isNavigatingHistory = true;
+    showView(targetView, false);
+    isNavigatingHistory = false;
+  } else {
+    // Fallback if history state is empty
+    const fallback = Auth?.isLoggedIn() ? "view-dashboard" : "view-landing";
+    isNavigatingHistory = true;
+    showView(fallback, false);
+    isNavigatingHistory = false;
+  }
+});
 
 /* ---------------- Misc ---------------- */
 

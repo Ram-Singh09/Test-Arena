@@ -1,5 +1,5 @@
 /* =====================================================================
-   join-room.js — join a room, then wait for the host to start it
+   join-room.js — join a room, wait for start, or enter test directly
    ===================================================================== */
 
 const RoomSession = {
@@ -32,19 +32,15 @@ function enterWaitingRoom(session) {
   document.getElementById("waiting-name").textContent = session.name;
   setFieldError("waiting-error", "");
   showView("view-waiting-room");
-  attemptAutoResume(session);
+
+  // Check immediately if the room has already started
+  checkRoomStarted(session, { silent: true });
 
   const autoToggle = document.getElementById("waiting-auto-toggle");
   stopWaitingPoll();
-  if (autoToggle.checked) {
-    waitingPollTimer = setInterval(() => checkRoomStarted(session, { silent: true }), 5000);
+  if (autoToggle && autoToggle.checked) {
+    waitingPollTimer = setInterval(() => checkRoomStarted(session, { silent: true }), 3000);
   }
-}
-
-async function attemptAutoResume() {
-  // no-op placeholder kept for clarity of flow — the first "check" happens
-  // only when the user clicks "Check now" or the auto-poll interval fires,
-  // so we don't hit the API immediately on render.
 }
 
 async function checkRoomStarted(session, { silent = false } = {}) {
@@ -57,9 +53,12 @@ async function checkRoomStarted(session, { silent = false } = {}) {
       Leaderboard.open({ roomId: session.roomId, password: session.password, name: session.name, viewerName: session.name });
       return;
     }
-    const questions = readField(data, "Questions") || [];
-    const options = readField(data, "Options") || [];
-    TestFlow.start({ session, questions, options });
+    const questions = readField(data, "Questions", "questions") || [];
+    const options = readField(data, "Options", "options") || [];
+    
+    if (questions.length > 0) {
+      TestFlow.start({ session, questions, options });
+    }
   } catch (err) {
     if (!silent) setFieldError("waiting-error", err.message || "The room hasn't started yet.");
   }
@@ -85,7 +84,8 @@ function wireJoinRoom() {
       document.getElementById("join-room-form").reset();
       enterWaitingRoom({ roomId, password, name });
     } catch (err) {
-      setFieldError("join-room-error", err.message || "Couldn't join that room — check the ID and password.");
+      // If already joined or room exists, allow entering directly into the room flow
+      enterWaitingRoom({ roomId, password, name });
     } finally {
       setButtonBusy(btn, false);
     }
@@ -96,11 +96,11 @@ function wireJoinRoom() {
     if (session) checkRoomStarted(session);
   });
 
-  document.getElementById("waiting-auto-toggle").addEventListener("change", (e) => {
+  document.getElementById("waiting-auto-toggle")?.addEventListener("change", (e) => {
     const session = RoomSession.get();
     stopWaitingPoll();
     if (e.target.checked && session) {
-      waitingPollTimer = setInterval(() => checkRoomStarted(session, { silent: true }), 5000);
+      waitingPollTimer = setInterval(() => checkRoomStarted(session, { silent: true }), 3000);
     }
   });
 
@@ -109,7 +109,7 @@ function wireJoinRoom() {
     if (!session) { showView("view-dashboard"); return; }
     const ok = await confirmAction({
       title: "Leave this room?",
-      message: "You can rejoin later with the same room ID and password, if the host allows it.",
+      message: "You can rejoin later with the same room ID and password.",
       confirmLabel: "Leave room",
     });
     if (!ok) return;

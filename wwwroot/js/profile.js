@@ -65,7 +65,7 @@ function wireProfile() {
 
 function openProfile() {
   const user = Auth.getUser();
-  document.getElementById("profile-name-display").value = user?.name || "";
+  document.getElementById("profile-name-display").value = user?.name || "User";
   document.getElementById("profile-email-display").value = user?.email || "";
   showView("view-profile");
 }

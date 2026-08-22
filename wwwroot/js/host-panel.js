@@ -14,7 +14,7 @@ const HostPanel = (() => {
       negativeMarks: data.negativeMarks,
       creatorName: data.creatorName,
       questionCount: data.questionCount,
-      started: false,
+      started: data.started ?? false,
     };
     render();
     showView("view-host-panel");
@@ -52,7 +52,8 @@ const HostPanel = (() => {
 
   function getState() { return state; }
 
-  function wire() {
+  function wire()
+  {
     document.getElementById("host-copy-btn").addEventListener("click", async () => {
       if (!state) return;
       const text = `Join my TestArena room:\nRoom ID: ${state.roomId ?? "(ask host)"}\nPassword: ${state.password}`;
@@ -88,6 +89,11 @@ const HostPanel = (() => {
         await Api.startRoom({ roomId: state.roomId, password: state.password, name: state.creatorName });
         state.started = true;
         render();
+
+        // Sync started status to the dashboard's saved live room
+        const saved = Store.get("ta_hosted_room", {});
+        Store.set("ta_hosted_room", { ...saved, started: true });
+
         showToast("Room started.", "success");
       } catch (err) {
         showToast(err.message || "Couldn't start the room — only the room's creator can start it.", "error");
@@ -103,6 +109,18 @@ const HostPanel = (() => {
         return;
       }
       Leaderboard.open({ roomId: state.roomId, password: state.password, name: state.creatorName, viewerName: state.creatorName });
+    });
+
+    document.getElementById("host-take-test-btn")?.addEventListener("click", () => {
+      if (!state || state.roomId === null) {
+        showToast("Enter or create a room first.", "error");
+        return;
+      }
+      enterWaitingRoom({
+        roomId: state.roomId,
+        password: state.password,
+        name: state.creatorName
+      });
     });
   }
 

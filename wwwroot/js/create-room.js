@@ -1,13 +1,11 @@
 /* =====================================================================
-   create-room.js — room settings + question builder
-   Also powers the host panel's "replace test paper" flow, since both
-   need the same question/answer builder UI.
+   create-room.js — room settings + question builder + AI JSON Import
    ===================================================================== */
 
 const CreateRoomBuilder = (() => {
   let qCounter = 0;
   let mode = "create"; // "create" | "replace"
-  let replaceContext = null; // { roomId, password, name } — used only in "replace" mode
+  let replaceContext = null;
 
   const listEl = () => document.getElementById("question-builder-list");
 
@@ -17,28 +15,34 @@ const CreateRoomBuilder = (() => {
     });
   }
 
-  function addQuestionRow() {
+  function addQuestionRow(initialData = null) {
     qCounter += 1;
     const uid = qCounter;
     const wrap = document.createElement("div");
     wrap.className = "qb-item";
     wrap.dataset.uid = String(uid);
+
+    const qText = initialData?.question || "";
+    const options = initialData?.options || ["", "", "", ""];
+    const correctAns = initialData?.ans !== undefined ? initialData.ans : 0;
+
     wrap.innerHTML = `
       <div class="qb-item-head">
         <span class="qb-item-index">Question</span>
         <button type="button" class="qb-remove-btn">Remove</button>
       </div>
       <label>Question text</label>
-      <input type="text" class="qb-question-text" placeholder="e.g. What does 'const' do in JavaScript?">
+      <input type="text" class="qb-question-text" placeholder="e.g. What does 'const' do in JavaScript?" value="${escapeHtml(qText)}">
       <div class="qb-options-grid">
         ${["A", "B", "C", "D"].map((letter, i) => `
           <div class="qb-option-row">
-            <label><input type="radio" name="qb-correct-${uid}" value="${i}" ${i === 0 ? "checked" : ""}> ${letter}</label>
-            <input type="text" class="qb-option-text" placeholder="Option ${letter}">
+            <label><input type="radio" name="qb-correct-${uid}" value="${i}" ${correctAns === i ? "checked" : ""}> ${letter}</label>
+            <input type="text" class="qb-option-text" placeholder="Option ${letter}" value="${escapeHtml(options[i] || "")}">
           </div>
         `).join("")}
       </div>
     `;
+
     wrap.querySelector(".qb-remove-btn").addEventListener("click", () => {
       const items = listEl().querySelectorAll(".qb-item");
       if (items.length <= 1) {
@@ -48,6 +52,7 @@ const CreateRoomBuilder = (() => {
       wrap.remove();
       renumber();
     });
+
     listEl().appendChild(wrap);
     renumber();
     return wrap;
@@ -60,8 +65,21 @@ const CreateRoomBuilder = (() => {
     for (let i = 0; i < initialCount; i++) addQuestionRow();
   }
 
-  /** Reads the DOM and returns { questions, options, ans } flattened
-   *  to match the Test_Paper record shape, or throws Error on invalid input. */
+  function populateFromParsedJson(data) {
+    listEl().innerHTML = "";
+    qCounter = 0;
+    setFieldError("builder-error", "");
+
+    for (let i = 0; i < data.questions.length; i++) {
+      const qOptions = data.options.slice(i * 4, i * 4 + 4);
+      addQuestionRow({
+        question: data.questions[i],
+        options: qOptions,
+        ans: data.ans[i],
+      });
+    }
+  }
+
   function collectTestPaper() {
     const items = Array.from(listEl().querySelectorAll(".qb-item"));
     if (items.length < 1) throw new Error("Add at least one question.");
@@ -112,7 +130,7 @@ const CreateRoomBuilder = (() => {
   function getMode() { return mode; }
   function getReplaceContext() { return replaceContext; }
 
-  return { addQuestionRow, resetBuilder, collectTestPaper, setMode, getMode, getReplaceContext };
+  return { addQuestionRow, resetBuilder, populateFromParsedJson, collectTestPaper, setMode, getMode, getReplaceContext };
 })();
 
 function openCreateRoom() {
@@ -133,7 +151,79 @@ function openReplaceTest(hostContext) {
   showView("view-create-room");
 }
 
-function wireCreateRoom() {
+function wireCreateRoom()
+{
+  const manualTabBtn = document.getElementById("tab-manual-builder-btn");
+  const aiTabBtn = document.getElementById("tab-ai-importer-btn");
+  const aiSection = document.getElementById("ai-importer-section");
+
+  if (manualTabBtn && aiTabBtn && aiSection) {
+    manualTabBtn.addEventListener("click", () => {
+      manualTabBtn.classList.replace("btn-ghost", "btn-secondary");
+      aiTabBtn.classList.replace("btn-secondary", "btn-ghost");
+      aiSection.classList.add("hidden");
+    });
+
+    aiTabBtn.addEventListener("click", () => {
+      aiTabBtn.classList.replace("btn-ghost", "btn-secondary");
+      manualTabBtn.classList.replace("btn-secondary", "btn-ghost");
+      aiSection.classList.remove("hidden");
+    });
+
+    document.getElementById("copy-ai-prompt-btn")?.addEventListener("click", async () => {
+      const promptText = document.getElementById("ai-prompt-template").textContent;
+      try {
+        await navigator.clipboard.writeText(promptText);
+        showToast("AI Prompt copied to clipboard!", "success");
+      } catch {
+        showToast("Failed to copy. Select and copy manually.", "error");
+      }
+    });
+
+    document.getElementById("parse-ai-json-btn")?.addEventListener("click", () => {
+      setFieldError("builder-error", "");
+      const rawJson = document.getElementById("ai-json-input").value.trim();
+      if (!rawJson) {
+        setFieldError("builder-error", "Paste valid JSON first.");
+        return;
+      }
+
+      try {
+        const clean = rawJson.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
+        const parsed = JSON.parse(clean);
+
+        const questions = parsed.Questions || parsed.questions;
+        const options = parsed.Options || parsed.options;
+        const ans = parsed.Ans || parsed.ans;
+
+        if (!Array.isArray(questions) || !Array.isArray(options) || !Array.isArray(ans)) {
+          throw new Error("JSON must contain 'questions', 'options', and 'ans' arrays.");
+        }
+        if (questions.length < 1 || questions.length > 500) {
+          throw new Error("Questions count must be between 1 and 500.");
+        }
+        if (options.length !== questions.length * 4) {
+          throw new Error(`Options array length must be exactly 4x questions length (found ${options.length} options for ${questions.length} questions).`);
+        }
+        if (ans.length !== questions.length) {
+          throw new Error(`Answers array length must match questions length.`);
+        }
+        for (let i = 0; i < ans.length; i++) {
+          if (ans[i] < 0 || ans[i] >= 4) {
+            throw new Error(`Answer index at position ${i} is invalid (must be 0, 1, 2, or 3).`);
+          }
+        }
+
+        CreateRoomBuilder.populateFromParsedJson({ questions, options, ans });
+        showToast(`Imported ${questions.length} questions successfully!`, "success");
+        document.getElementById("ai-json-input").value = "";
+        manualTabBtn.click();
+      } catch (err) {
+        setFieldError("builder-error", "JSON Import Error: " + err.message);
+      }
+    });
+  }
+
   document.getElementById("add-question-btn").addEventListener("click", () => {
     CreateRoomBuilder.addQuestionRow();
   });
@@ -171,14 +261,13 @@ function wireCreateRoom() {
         showToast("Test paper updated.", "success");
         showView("view-host-panel");
       } catch (err) {
-        setFieldError("builder-error", err.message || "Couldn't upload the test paper — if the room has already started, questions can no longer be changed.");
+        setFieldError("builder-error", err.message || "Couldn't upload the test paper.");
       } finally {
         setButtonBusy(btn, false);
       }
       return;
     }
 
-    // mode === "create"
     const minutes = parseInt(document.getElementById("room-minutes").value, 10);
     const password = parseInt(document.getElementById("room-password").value, 10);
     const positiveMarks = parseInt(document.getElementById("room-positive-marks").value, 10);
@@ -208,12 +297,31 @@ function wireCreateRoom() {
       const data = await Api.createRoom({
         minutes, password, positiveMarks, negativeMarks, creatorName, testPaper,
       });
-      HostPanel.openWithRoom({
-        roomId: readField(data, "Room_id", "RoomId", "Id", "room_id", "id"),
-        password, minutes, positiveMarks, negativeMarks, creatorName,
+      const roomId = readField(data, "Room_id", "RoomId", "Id", "room_id", "id");
+
+      // 1. Auto-join room for creator
+      try {
+        await Api.joinRoom({ roomId, password, name: creatorName });
+      } catch (joinErr) {
+        console.warn("Creator auto-join note:", joinErr);
+      }
+
+      const roomData = {
+        roomId,
+        password,
+        minutes,
+        positiveMarks,
+        negativeMarks,
+        creatorName,
         questionCount: testPaper.questions.length,
-      });
-      showToast("Room created.", "success");
+        started: false,
+      };
+
+      // 2. Overwrite / persist as the user's single active hosted room
+      Store.set("ta_hosted_room", roomData);
+
+      HostPanel.openWithRoom(roomData);
+      showToast("Room created & joined automatically.", "success");
     } catch (err) {
       setFieldError("builder-error", err.message || "Couldn't create the room.");
     } finally {

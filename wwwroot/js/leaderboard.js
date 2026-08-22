@@ -32,11 +32,23 @@ const Leaderboard = (() => {
     setButtonBusy(refreshBtn, true, "Refreshing…");
     try {
       const data = await Api.getLeaderboard({
-        roomId: current.roomId, password: current.password, name: current.name,
+        roomId: current.roomId, 
+        password: current.password, 
+        name: current.name,
       });
-      const entries = readField(data, "Names_and_scores") || [];
+
+      // Handle raw array from Results.Ok(Scores) or wrapped object fallback
+      let entries = [];
+      if (Array.isArray(data)) {
+        entries = data;
+      } else {
+        entries = readField(data, "Names_and_scores", "namesAndScores", "scores") || [];
+      }
+
       listEl.innerHTML = "";
+      // Hide empty message if there are entries; show if 0 entries
       emptyEl.classList.toggle("hidden", entries.length > 0);
+
       entries.forEach((raw, idx) => {
         const { name, score } = parseEntry(raw);
         const li = document.createElement("li");

@@ -45,25 +45,29 @@ const Auth = (() => {
     }
   }
 
-  /** Best-effort claim extraction from a JWT so we have a display name
-   *  without a dedicated "who am I" endpoint. Falls back to whatever
-   *  the person typed on the login form if claims aren't present. */
   function userFromLoginResponse(token, typedEmail) {
     const claims = decodeJwtPayload(token) || {};
+    const normalizedEmail = (typedEmail || "").trim().toLowerCase();
+    const storedName = Store.get("ta_name_" + normalizedEmail, null);
+
+    // Prioritize stored name from registration -> JWT claim -> default to "User"
     const name =
+      storedName ||
       readField(claims, "name", "unique_name", "given_name") ||
       claims["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] ||
-      (typedEmail ? typedEmail.split("@")[0] : "there");
+      "User";
+
     const email =
       readField(claims, "email") ||
       claims["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] ||
       typedEmail || "";
+
     return { name, email };
   }
 
   async function login(email, password) {
     const data = await Api.loginUser({ email, password });
-    const token = readField(data, "Token");
+    const token = readField(data, "Token", "token");
     if (!token || typeof token !== "string") {
       throw new ApiError("Logged in, but no token was returned by the server.", 0);
     }
@@ -75,7 +79,7 @@ const Auth = (() => {
     try {
       if (isLoggedIn()) await Api.signOut();
     } catch {
-      /* best-effort — still clear the local session below */
+      /* best-effort */
     }
     Api.setToken(null);
     Store.remove(CONFIG.STORAGE_KEYS.USER);
@@ -89,7 +93,6 @@ const Auth = (() => {
 /* ---------------- Wiring ---------------- */
 
 function wireAuthForms() {
-  // Nav / hero navigation
   document.getElementById("nav-login-btn").addEventListener("click", () => showView("view-login"));
   document.getElementById("nav-register-btn").addEventListener("click", () => showView("view-register"));
   document.getElementById("hero-login-btn").addEventListener("click", () => showView("view-login"));
@@ -167,6 +170,10 @@ function wireAuthForms() {
         otp: parseInt(otp, 10),
         otpType: CONFIG.OTP_TYPE.Registration,
       });
+
+      // Save real display name keyed by email
+      Store.set("ta_name_" + email.toLowerCase(), name);
+
       showToast("Account created — log in to continue.", "success");
       document.getElementById("login-email").value = email;
       document.getElementById("register-form").reset();
@@ -233,8 +240,60 @@ function wireAuthForms() {
   });
 }
 
+function renderDashboardHostedRoom() {
+  const hosted = Store.get("ta_hosted_room", null);
+  const card = document.getElementById("dash-hosted-card");
+  
+  if (!card) return;
+
+  if (hosted && hosted.roomId) {
+    document.getElementById("dash-hosted-id").textContent = String(hosted.roomId);
+    document.getElementById("dash-hosted-pass").textContent = String(hosted.password);
+    document.getElementById("dash-hosted-status").textContent = hosted.started ? "Live / In Progress" : "Waiting to Start";
+    card.classList.remove("hidden");
+
+    // All click handlers safely inside the check
+    document.getElementById("dash-hosted-take-btn").onclick = () => {
+      enterWaitingRoom({
+        roomId: hosted.roomId,
+        password: hosted.password,
+        name: hosted.creatorName,
+      });
+    };
+
+    document.getElementById("dash-hosted-manage-btn").onclick = () => {
+      HostPanel.openWithRoom(hosted);
+    };
+
+    document.getElementById("dash-hosted-lb-btn").onclick = () => {
+      Leaderboard.open({
+        roomId: hosted.roomId,
+        password: hosted.password,
+        name: hosted.creatorName,
+        viewerName: hosted.creatorName,
+      });
+    };
+
+    // The new dismiss/clear button for stale rooms
+    document.getElementById("dash-hosted-clear-btn").onclick = async () => {
+      const ok = await confirmAction({
+        title: "Dismiss Room?",
+        message: "This removes the room from your dashboard. Only do this if the test is over or the server deleted it.",
+        confirmLabel: "Dismiss",
+      });
+      if (ok) {
+        Store.remove("ta_hosted_room");
+        renderDashboardHostedRoom(); // Re-render to hide the card immediately
+      }
+    };
+  } else {
+    card.classList.add("hidden");
+  }
+}
+
 function goToDashboard() {
   const user = Auth.getUser();
   document.getElementById("dashboard-welcome").textContent = user?.name ? `Welcome, ${user.name}` : "Welcome";
+  renderDashboardHostedRoom();
   showView("view-dashboard");
 }
