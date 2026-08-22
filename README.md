@@ -101,7 +101,7 @@ The frontend expects these endpoints (copied from your backend's exact naming):
 | `TestArena/User/LeaveRoom` | PATCH | Participant leaves a room |
 | `TestArena/TestRoom/SubmitTest` | POST | Participant submits answers |
 | `TestArena/TestRoom/GetLeaderboard` | POST | Fetch live standings |
-| `TestArena/SignOut` | POST | Log out |
+| `TestArena/SignOut` |  | Log out |
 
 See the **`README.md`** in the root folder for assumptions made about response shapes and field naming (especially for `Create_Room`, `Get_Questions`, and the leaderboard format).
 
