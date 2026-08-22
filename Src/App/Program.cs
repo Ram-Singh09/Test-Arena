@@ -330,6 +330,25 @@ Web_app.MapPost(End_Points.Get_LeaderBoard, (Room_Joining_Info Info, ClaimsPrinc
 
 }).RequireAuthorization();
 
+Web_app.MapGet(End_Points.Get_LeaderBoard, async (ClaimsPrincipal User, App_DB_Context Db) =>
+{
+    // db id
+    var Db_id_str = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (Db_id_str is null) return App_Funcs.Get_Error_Msg(App_State.Token_Data_Null);
+
+    var Parsed = int.TryParse(Db_id_str, out int Db_id);
+    if (!Parsed) return App_Funcs.Get_Error_Msg(App_State.Token_Data_Null);
+
+    var Name_info = await App_Funcs.Get_Name(Db_id, Db);
+
+    if (Name_info.Item1 != App_State.Op_Success)
+        return App_Funcs.Get_Error_Msg(Name_info.Item1);
+
+    return Results.Ok(Name_info.Item2);
+
+}).RequireAuthorization();
+
+
 // room room room
 Web_app.Run();
 
