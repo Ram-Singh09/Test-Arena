@@ -17,8 +17,8 @@ class ApiError extends Error {
 }
 
 const Api = (() => {
-    function getBaseUrl() {
-    return window.location.origin;
+  function getBaseUrl() {
+    return "";
   }
 
   function setBaseUrl(url) {
@@ -43,9 +43,19 @@ const Api = (() => {
     if (!endpoint) throw new ApiError(`Unknown endpoint "${endpointKey}"`, 0);
 
     const base = getBaseUrl();
-    if (!base) throw new ApiError("Backend URL is not configured yet.", 0);
+    
+    // Allow empty strings by specifically checking for null/undefined
+    if (base === null || base === undefined) {
+      throw new ApiError("Backend URL is not configured yet.", 0);
+    }
 
-    const url = base + endpoint.path;
+    // Strip trailing slashes from base, and leading slashes from path
+    const cleanBase = base.replace(/\/+$/, "");
+    const cleanPath = endpoint.path.replace(/^\/+/, "");
+
+    // Combine safely. If base is empty, just use the clean path.
+    const url = cleanBase === "" ? cleanPath : `${cleanBase}/${cleanPath}`;
+
     const headers = { "Content-Type": "application/json" };
     if (auth) {
       const token = getToken();
@@ -62,7 +72,7 @@ const Api = (() => {
       });
     } catch (networkErr) {
       throw new ApiError(
-        `Couldn't reach the backend at ${base} — check the URL, that the server is running, and CORS settings.`,
+        `Couldn't reach the backend at ${url} — check the URL, that the server is running, and CORS settings.`,
         0
       );
     }
