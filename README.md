@@ -1,5 +1,5 @@
 https://prac-gather.onrender.com
-
+Partially functional due to lack of persistent storage by free tier of site hosting. 
 # Test-Arena
 
 # TestArena 🎓
