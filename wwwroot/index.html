@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Answer Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:wght@600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+<style>
+:root{--paper:#F6F7F4;--ink:#222;--pink:#C2185B;--pinkbg:#FBE3EC;--green:#0E7A5F;--line:#D9DBD3}
+body{background:var(--paper);color:var(--ink);font-family:'Atkinson Hyperlegible',system-ui,sans-serif;font-size:17px;line-height:1.5;
+ background-image:radial-gradient(var(--line) 1.2px,transparent 1.2px);background-size:22px 22px}
+h1,h2,h3,.disp{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;letter-spacing:-.01em}
+.card{background:#fff;border:2px solid var(--ink);border-radius:10px;padding:1.25rem}
+.btn{border:2px solid var(--ink);border-radius:8px;padding:.55rem 1.1rem;font-weight:700;background:#fff;cursor:pointer;transition:transform .08s,box-shadow .08s;box-shadow:3px 3px 0 var(--ink)}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.btn:disabled{opacity:.5;pointer-events:none}
+.btn.pri{background:var(--pink);color:#fff}.btn.grn{background:var(--green);color:#fff}
+.btn.sm{padding:.25rem .7rem;box-shadow:2px 2px 0 var(--ink);font-size:.9rem}
+.in{width:100%;border:2px solid var(--ink);border-radius:8px;padding:.5rem .7rem;background:#fff}
+.in:focus,.btn:focus-visible,.opt:focus-visible{outline:3px solid var(--pink);outline-offset:2px}
+label.l{display:block;font-weight:700;margin-bottom:.2rem}
+.hint{font-size:.9rem;color:#555}
+.opt{display:flex;gap:.75rem;align-items:center;width:100%;text-align:left;border:2px solid var(--line);border-radius:8px;padding:.55rem .7rem;background:#fff;cursor:pointer}
+.opt:hover{border-color:var(--ink)}
+.opt.on{border-color:var(--pink);background:var(--pinkbg)}
+.bub{flex:none;width:2rem;height:2rem;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center;font-weight:700;font-size:.9rem;background:#fff}
+.opt.on .bub,.bub.on{background:var(--pink);color:#fff;border-color:var(--pink)}
+.bub.ok{background:var(--green);color:#fff;border-color:var(--green)}
+.tab{padding:.5rem 1rem;font-weight:700;border:2px solid var(--ink);border-radius:8px 8px 0 0;background:#fff;margin-bottom:-2px}
+.tab.on{background:var(--ink);color:#fff}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body x-data="app()" x-init="init()" @pagehide.window="onHide($event)" @beforeunload.window="onBefore($event)">
+<div class="max-w-3xl mx-auto px-4 py-6">
+
+<!-- header -->
+<header class="flex flex-wrap items-center justify-between gap-3 mb-6">
+  <button class="flex items-center gap-2" @click="home()" :disabled="inRoom">
+    <span class="bub on" style="width:2.2rem;height:2.2rem">A</span><span class="disp text-2xl">Answer Room</span>
+  </button>
+  <div class="card !py-1 !px-3 flex items-center gap-2 text-sm" x-show="uid!==null" x-cloak>
+    <span>Your user ID: <b class="disp text-lg" x-text="uid"></b></span>
+    <button class="btn sm" @click="copy(uid)">Copy</button>
+  </div>
+</header>
+
+<div x-show="err" x-cloak class="card mb-4 !border-[var(--pink)] !bg-[var(--pinkbg)]" role="alert">
+  <b>Something went wrong:</b> <span x-text="err"></span>
+  <button class="btn sm ml-2" @click="err=''">Dismiss</button>
+</div>
+<div x-show="note" x-cloak class="card mb-4 !border-[var(--green)]" x-text="note"></div>
+
+<!-- HOME -->
+<section x-show="view==='home'" class="grid gap-4 sm:grid-cols-2">
+  <div class="card sm:col-span-2">
+    <h1 class="text-4xl mb-1">Set a paper. Sit a paper.</h1>
+    <p>Create a timed test room, or join one with a room ID and password. A user ID from the server is fetched first and saved on this device.</p>
+  </div>
+  <button class="card text-left hover:bg-[var(--pinkbg)]" @click="go('create')"><h2 class="text-2xl">Create a room</h2><p class="hint">Write questions or paste AI-made JSON, then start the test.</p></button>
+  <button class="card text-left hover:bg-[var(--pinkbg)]" @click="go('join')"><h2 class="text-2xl">Join a room</h2><p class="hint">New joiner, or coming back with your old user ID.</p></button>
+</section>
+
+<!-- CREATE -->
+<section x-show="view==='create'" x-cloak class="space-y-4">
+  <h1 class="text-3xl">Create a room</h1>
+  <div class="card grid gap-3 sm:grid-cols-2">
+    <div><label class="l">Your name</label><input class="in" x-model="c.name" maxlength="40"></div>
+    <div><label class="l">Room password</label><input class="in" type="number" min="0" max="65535" x-model.number="c.password"><span class="hint">Number from 0 to 65535</span></div>
+    <div><label class="l">Duration (minutes)</label><input class="in" type="number" min="1" max="210" x-model.number="c.minutes"><span class="hint">Longest allowed: 210</span></div>
+    <div><label class="l">Seats (test takers)</label><input class="in" type="number" min="1" x-model.number="c.takers"></div>
+    <div><label class="l">Marks for a right answer</label><input class="in" type="number" min="0" max="255" x-model.number="c.pos"></div>
+    <div><label class="l">Marks lost for a wrong answer</label><input class="in" type="number" min="0" max="255" x-model.number="c.neg"></div>
+  </div>
+
+  <div class="card space-y-3">
+    <h2 class="text-xl" x-text="editIdx<0 ? 'Add a question' : 'Editing question '+(editIdx+1)"></h2>
+    <div><label class="l">Question</label><textarea class="in" rows="2" x-model="q.q"></textarea></div>
+    <template x-for="i in 4" :key="i">
+      <div class="flex items-center gap-2">
+        <button type="button" class="bub" :class="q.a===i-1&&'ok'" @click="q.a=i-1" :aria-label="'Mark option '+'ABCD'[i-1]+' correct'" :aria-pressed="q.a===i-1" x-text="'ABCD'[i-1]"></button>
+        <input class="in" x-model="q.o[i-1]" :placeholder="'Option '+'ABCD'[i-1]">
+      </div>
+    </template>
+    <p class="hint">Tap the green letter to mark the correct option.</p>
+    <div class="flex gap-2">
+      <button class="btn pri" @click="saveQ()" x-text="editIdx<0 ? 'Add question' : 'Update question'"></button>
+      <button class="btn" x-show="editIdx>=0" @click="resetQ()">Cancel edit</button>
+    </div>
+  </div>
+
+  <div class="card space-y-2">
+    <h2 class="text-xl">Added questions (<span x-text="qs.length"></span>/500)</h2>
+    <p class="hint" x-show="!qs.length">Nothing yet. Add a question above or import JSON below.</p>
+    <template x-for="(it,n) in qs" :key="n">
+      <div class="border-2 border-[var(--line)] rounded-lg p-3">
+        <div class="flex justify-between gap-2">
+          <b x-text="(n+1)+'. '+it.q"></b>
+          <span class="flex gap-1 shrink-0"><button class="btn sm" @click="editQ(n)">Edit</button><button class="btn sm" @click="qs.splice(n,1);resetQ()">Delete</button></span>
+        </div>
+        <ul class="mt-1 text-[.95rem]"><template x-for="(op,k) in it.o" :key="k"><li :class="k===it.a&&'font-bold text-[var(--green)]'" x-text="'ABCD'[k]+'. '+op+(k===it.a?'  ✓':'')"></li></template></ul>
+      </div>
+    </template>
+  </div>
+
+  <div class="card space-y-2">
+    <h2 class="text-xl">Make the paper with AI</h2>
+    <p class="hint">Copy this prompt into any AI chat with your topic, then paste its JSON reply below.</p>
+    <textarea class="in text-sm" rows="7" readonly x-model="aiPrompt"></textarea>
+    <button class="btn sm" @click="copy(aiPrompt)">Copy prompt</button>
+    <label class="l mt-2">Paste the JSON here</label>
+    <textarea class="in text-sm" rows="5" x-model="json" placeholder='{"questions":[{"question":"…","options":["…","…","…","…"],"answer":0}]}'></textarea>
+    <button class="btn grn" @click="importJson()">Import questions</button>
+  </div>
+
+  <button class="btn pri w-full !py-3 text-lg" :disabled="busy" @click="createRoom()">Create room and start test</button>
+</section>
+
+<!-- JOIN -->
+<section x-show="view==='join'" x-cloak>
+  <h1 class="text-3xl mb-3">Join a room</h1>
+  <div class="flex"><button class="tab" :class="!rejoin&&'on'" @click="rejoin=false">New joiner</button><button class="tab" :class="rejoin&&'on'" @click="rejoin=true">Rejoin with old ID</button></div>
+  <div class="card grid gap-3 sm:grid-cols-2 !rounded-tl-none">
+    <div class="sm:col-span-2" x-show="rejoin"><label class="l">Your old user ID</label><input class="in" type="number" x-model.number="j.uid"><span class="hint">Closed the browser or lost internet? Enter the ID you were given. If the room has ended or is full, the server will refuse.</span></div>
+    <div class="sm:col-span-2"><label class="l">Your name</label><input class="in" x-model="j.name" maxlength="40"></div>
+    <div><label class="l">Room ID</label><input class="in" type="number" x-model.number="j.room"></div>
+    <div><label class="l">Password</label><input class="in" type="number" x-model.number="j.password"></div>
+    <button class="btn pri sm:col-span-2 !py-3" :disabled="busy" @click="joinRoom()" x-text="rejoin?'Rejoin room':'Join room'"></button>
+  </div>
+</section>
+
+<!-- TEST -->
+<section x-show="view==='test'" x-cloak class="space-y-4">
+  <div class="card sticky top-2 z-10 flex flex-wrap items-center justify-between gap-2">
+    <div><b>Room <span x-text="room.room"></span></b> · <span x-text="answered()+' of '+paper.questions.length+' answered'"></span></div>
+    <div class="disp text-2xl" :class="left!==null&&left<60&&'text-[var(--pink)]'" x-text="clock()"></div>
+    <button class="btn grn" :disabled="busy" @click="submit(false)">Submit test</button>
+  </div>
+  <template x-for="(qt,n) in paper.questions" :key="n">
+    <div class="card space-y-2">
+      <h3 class="text-lg" x-text="(n+1)+'. '+qt"></h3>
+      <template x-for="k in 4" :key="k">
+        <button class="opt" :class="ans[n]===k-1&&'on'" @click="ans[n]=(ans[n]===k-1?-1:k-1)" :aria-pressed="ans[n]===k-1">
+          <span class="bub" x-text="'ABCD'[k-1]"></span><span x-text="paper.options[n*4+k-1]"></span>
+        </button>
+      </template>
+    </div>
+  </template>
+</section>
+
+<!-- RESULT -->
+<section x-show="view==='result'" x-cloak class="space-y-4">
+  <div class="card text-center"><p>Your score</p><div class="disp text-6xl text-[var(--pink)]" x-text="score"></div></div>
+  <div class="card">
+    <div class="flex justify-between items-center mb-2"><h2 class="text-xl">Leaderboard</h2><button class="btn sm" @click="loadBoard()">Refresh</button></div>
+    <p class="hint" x-show="!board.length">No scores yet. Press Refresh as others finish.</p>
+    <ol class="space-y-1"><template x-for="(b,i) in board" :key="i"><li class="flex gap-3 border-b border-[var(--line)] py-1"><span class="bub" x-text="i+1"></span><span x-text="b"></span></li></template></ol>
+  </div>
+  <button class="btn pri" @click="leave()">Leave room</button>
+</section>
+
+</div>
+
+<script>
+const API = {
+  base: '',
+  Get_User_Id:'/Get_User_Id', Create_Room:'/Create_Room', Join_Room:'/Join_Room',
+  Leave_Room:'/Leave_Room', Get_Questions:'/Get_Questions', Sumbit_Test:'/Sumbit_Test', Get_LeaderBoard:'/Get_LeaderBoard'
+};
+const PATHS_URL = '/ApiPaths';   // must equal End_Points.Api_Paths
+async function loadPaths(){
+  try{
+    const d = await (await fetch(API.base + PATHS_URL)).json();
+    for(const k in d){
+      const normK = k.replace(/_/g, '').toLowerCase();
+      const m = Object.keys(API).find(x => x.replace(/_/g, '').toLowerCase() === normK);
+      if(m && m !== 'base') API[m] = d[k];
+    }
+  }catch{}
+}
+const store = {get:k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}}, set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+
+async function req(path, method, body, keepalive){
+  if(!path.startsWith('/')) path='/'+path;
+  const r = await fetch(API.base+path,{method,keepalive,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  const t = await r.text(); let d=t; try{d=JSON.parse(t)}catch{}
+  if(!r.ok) throw new Error((typeof d==='string'?d:(d.title||d.message||JSON.stringify(d)))||('HTTP '+r.status));
+  return d;
+}
+
+function app(){return{
+  view:'home', uid:null, err:'', note:'', busy:false, inRoom:false,
+  c:{name:'',password:1234,minutes:60,takers:30,pos:4,neg:1},
+  j:{uid:null,name:'',room:null,password:null}, rejoin:false,
+  qs:[], q:{q:'',o:['','','',''],a:0}, editIdx:-1, json:'',
+  room:{room:null,password:null,name:''}, paper:{questions:[],options:[]}, ans:[], left:null, elapsed:0, timer:null,
+  score:null, board:[],
+  aiPrompt:`Make a multiple-choice test on: [YOUR TOPIC], with [N] questions.
+Reply with ONLY valid JSON, no markdown fences, in exactly this shape:
+{"questions":[{"question":"text","options":["A text","B text","C text","D text"],"answer":0}]}
+Rules: exactly 4 options per question; "answer" is the 0-based index (0=A, 1=B, 2=C, 3=D) of the single correct option; no empty strings; at most 500 questions.`,
+
+  async init(){ await loadPaths(); const s=store.get('uid'); if(s!==null) this.uid=s; const last=store.get('last'); if(last){this.j={...this.j,...last}} },
+  home(){this.view='home';this.err=''},
+  go(v){this.err='';this.view=v},
+  async ensureUid(){ if(this.uid!==null&&!this.rejoin) return this.uid; const id=await req(API.Get_User_Id,'GET'); this.uid=id; store.set('uid',id); return id; },
+  async run(fn){ this.busy=true; this.err=''; try{await fn()}catch(e){this.err=e.message||String(e)} this.busy=false; },
+  copy(t){ navigator.clipboard?.writeText(String(t)); this.note='Copied.'; setTimeout(()=>this.note='',1500); },
+
+  /* ---- question editor ---- */
+  resetQ(){this.q={q:'',o:['','','',''],a:0};this.editIdx=-1},
+  saveQ(){
+    const q=this.q; if(!q.q.trim()||q.o.some(o=>!o.trim())) return this.err='Fill in the question and all 4 options.';
+    if(this.qs.length>=500&&this.editIdx<0) return this.err='A paper can hold at most 500 questions.';
+    const it={q:q.q.trim(),o:q.o.map(o=>o.trim()),a:q.a}; this.err='';
+    this.editIdx<0?this.qs.push(it):this.qs.splice(this.editIdx,1,it); this.resetQ();
+  },
+  editQ(n){const it=this.qs[n];this.q={q:it.q,o:[...it.o],a:it.a};this.editIdx=n;window.scrollTo({top:0,behavior:'smooth'})},
+  importJson(){
+    try{
+      let t=this.json.trim().replace(/^```(json)?/i,'').replace(/```$/,'').trim(); let d=JSON.parse(t); d=Array.isArray(d)?d:d.questions;
+      if(!Array.isArray(d)||!d.length) throw 0;
+      const out=d.map(x=>({q:String(x.question??x.q??'').trim(),o:(x.options??x.o).map(s=>String(s).trim()),a:Number(x.answer??x.a)}));
+      if(out.some(x=>!x.q||x.o.length!==4||x.o.some(s=>!s)||![0,1,2,3].includes(x.a))) throw 0;
+      if(this.qs.length+out.length>500) return this.err='That would pass the 500-question limit.';
+      this.qs.push(...out); this.json=''; this.err=''; this.note='Imported '+out.length+' questions.'; setTimeout(()=>this.note='',2500);
+    }catch{ this.err='That JSON does not match the layout. Re-copy the prompt and ask the AI again.' }
+  },
+
+  /* ---- create / join ---- */
+  createRoom(){ this.run(async()=>{
+    const c=this.c;
+    if(!c.name.trim()) throw new Error('Enter your name.');
+    if(!(c.minutes>=1&&c.minutes<=210)) throw new Error('Duration must be 1 to 210 minutes.');
+    if(!(c.password>=0&&c.password<=65535)) throw new Error('Password must be 0 to 65535.');
+    if(!(c.takers>=1)) throw new Error('Seats must be at least 1.');
+    if(!this.qs.length) throw new Error('Add at least one question.');
+    const id=await this.ensureUid();
+    const res=await req(API.Create_Room,'POST',{
+      User_id:{ Id: id }, Minutes: c.minutes, Password: c.password, Positve_marks: c.pos, Negative_marks: c.neg,
+      Test_taker_count: c.takers, Creator_name: c.name.trim(),
+      Test_paper: { Questions: this.qs.map(x => x.q), Options: this.qs.flatMap(x => x.o), Ans: this.qs.map(x => x.a) }
+    });
+    const rid = typeof res==='object'&&res!==null ? (res.Room_id??res.room_id??res.id) : res;
+    this.note='Room created. Room ID: '+rid+'  Password: '+c.password; 
+    // Pass true for skipJoin since Create_Room automatically puts the creator in the room
+    await this.enter({room:rid,password:c.password,name:c.name.trim()}, c.minutes*60, true);
+  })},
+  joinRoom(){ this.run(async()=>{
+    const j=this.j;
+    if(!j.name.trim()||j.room==null||j.password==null) throw new Error('Enter name, room ID and password.');
+    if(this.rejoin){ if(j.uid==null) throw new Error('Enter your old user ID.'); this.uid=j.uid; store.set('uid',j.uid); }
+    else await this.ensureUid();
+    store.set('last',{name:j.name,room:j.room});
+    try{ await this.enter({room:j.room,password:j.password,name:j.name.trim()}, null, false) }
+    catch(e){ throw new Error(e.message+(this.rejoin?' — the room may be closed, full, or the ID/password may be wrong.':'')) }
+  })},
+  async enter(r,secs,skipJoin=false){
+    this.room=r; const body=this.body();
+    
+    // Only call Join_Room if we aren't skipping it (e.g. Creator is already joined)
+    if(!skipJoin){
+      try {
+        await req(API.Join_Room,'POST',body);
+      } catch(e) {
+        // If already joined, allow proceeding to test questions anyway
+        if(!e.message.toLowerCase().includes('already joined')){
+          throw e;
+        }
+      }
+    }
+
+    this.inRoom=true;
+    const d=await req(API.Get_Questions,'POST',body);
+    this.paper={questions:d.Questions??d.questions??[],options:d.Options??d.options??[]};
+    this.ans=this.paper.questions.map(()=>-1);
+    if(!secs&&(d.Minutes??d.minutes)) secs=(d.Minutes??d.minutes)*60;
+    this.left=secs??null; this.elapsed=0; this.view='test';
+    clearInterval(this.timer);
+    this.timer=setInterval(()=>{ this.elapsed++; if(this.left!==null){ this.left--; if(this.left<=0){clearInterval(this.timer);this.submit(true)} } },1000);
+  },
+  body(){return{ User_id:{ Id: this.uid }, Room_id: this.room.room, Password: this.room.password, Name: this.room.name }},
+  clock(){ const s=this.left!==null?Math.max(this.left,0):this.elapsed; const f=n=>String(n).padStart(2,'0'); return f(Math.floor(s/3600))+':'+f(Math.floor(s%3600/60))+':'+f(s%60)+(this.left===null?' elapsed':'') },
+  answered(){return this.ans.filter(a=>a>=0).length},
+
+  /* ---- test ---- */
+  submit(auto){
+    if(!auto&&this.answered()<this.ans.length&&!confirm((this.ans.length-this.answered())+' questions are unanswered. Submit anyway?')) return;
+    this.run(async()=>{
+      const s=await req(API.Sumbit_Test,'POST',{User_id:{Id:this.uid},Answers:this.ans,Room_id:this.room.room,Password:this.room.password});
+      clearInterval(this.timer); this.score=typeof s==='object'&&s!==null?(s.Score??s.score??JSON.stringify(s)):s; this.view='result'; this.loadBoard();
+    });
+  },
+  async loadBoard(){ try{
+    const d=await req(API.Get_LeaderBoard,'POST',this.body());
+    const l=Array.isArray(d)?d:(d.Names_and_scores??d.namesAndScores??d.names_and_scores??[]); this.board=l.map(x=>typeof x==='string'?x:JSON.stringify(x));
+  }catch(e){this.err=e.message} },
+  leave(){ this.run(async()=>{ await req(API.Leave_Room,'PATCH',this.body()); this.reset(); }) },
+  reset(){ clearInterval(this.timer); this.inRoom=false; this.view='home'; this.score=null; this.board=[]; this.note=''; },
+
+  /* ---- leaving the window ---- */
+  onBefore(e){ if(this.inRoom&&this.view==='test'){e.preventDefault();e.returnValue=''} },
+  onHide(e){ if(this.inRoom&&!e.persisted){ try{req(API.Leave_Room,'PATCH',this.body(),true).catch(()=>{})}catch{} } },
+}}
+</script>
+</body>
+</html>
